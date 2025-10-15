@@ -19,9 +19,9 @@ class Ativo:
             raise ValueError("O ticker não pode ser vazio.")
         else:
             self._ticker = novo_ticker.strip()
-      
+
     # Getter e Setter do Nome da empresa                
-       
+    
     @property
     def nome_empresa(self):
         return self._nome_empresa
