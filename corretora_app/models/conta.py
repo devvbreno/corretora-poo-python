@@ -1,8 +1,9 @@
 from .cliente import Cliente
+from .itransacionavel import ITransacionavel
 
 #Classe abstrata mãe (define a estrutura de uma conta genérica)
 
-class Conta:
+class Conta(ITransacionavel):
     def __init__(self, cliente : Cliente, numero_conta : str, saldo_inicial : float = 0.0):
         
         self._cliente = cliente
