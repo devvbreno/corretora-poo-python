@@ -7,7 +7,6 @@ def main():
     print("--- Bem-vindo(a) à Corretora POO ---")
 
     # DADOS EM MEMÓRIA (Substitui o Banco de Dados por enquanto)
-    # Vamos criar alguns dados de exemplo para ter com o que trabalhar
     try:
         cliente_principal = Cliente(nome_cliente="Breno", cpf_cliente="11122233344")
         conta_principal = ContaInvestimento(cliente=cliente_principal, numero_conta="12345-6")
