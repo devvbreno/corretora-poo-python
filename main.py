@@ -2,6 +2,10 @@ from corretora_app.models.cliente import Cliente
 from corretora_app.models.conta_investimento import ContaInvestimento
 from corretora_app.models.ativo import Ativo
 from corretora_app.models.conta import Conta 
+from corretora_app.database import adicionar_cliente
+from mysql.connector import errorcode
+import mysql.connector
+
 
 def main():
     print("--- Bem-vindo(a) à Corretora POO ---")
@@ -13,9 +17,24 @@ def main():
         ativo_exemplo = Ativo(ticker="PYTH4", nome_empresa="Python Corp", preco_atual=50.0)
         print("Dados iniciais carregados.")
         print(conta_principal)
-    except Exception as e:
-        print(f"Erro ao inicializar dados: {e}")
+        
+        # Tentativa de adicionar o cliente ao banco de dados
+        print("Tentando adicionar o cliente ao banco de dados...")
+        adicionar_cliente(cliente_principal.nome_cliente, cliente_principal.cpf_limpo)
+        print("Cliente adicionado ao banco de dados com sucesso!(verificar workbench)")
+
+    except ValueError as e:
+        print(f"Erro DE VALOR ao inicializar dados: {e}")
         return 
+    
+    except mysql.connector.Error as db_error:
+        print(f"Erro DE BANCO DE DADOS ao inicializar dados: {db_error}")
+
+    except Exception as e:
+        print(f"Erro DESCONHECIDO ao inicializar dados: {e}")
+        return
+
+    print(conta_principal)
 
     while True:
         print("\n--- MENU PRINCIPAL ---")

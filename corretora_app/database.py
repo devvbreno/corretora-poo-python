@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 
 
-load_dotenv() # carrega as variaveis do arquivo .env
+load_dotenv() 
 
 def conectar_db():
 
@@ -16,7 +16,7 @@ def conectar_db():
         db_name = os.getenv ("DB_NAME")
 
         if not all([db_host, db_user, db_password, db_name]):
-            raise ValueError ("Todos os dados nao foram fornecidos")
+            raise ValueError ("Os dados corretos não foram fornecidos")
         
         cnx = mysql.connector.connect(
         host=db_host,
@@ -43,3 +43,24 @@ def desconectar_db(cnx):
         print ("Não estava conectado ao banco de dados")
         return None
 
+def adicionar_cliente(nome, cpf):
+
+    cursor = None
+    cnx = None
+
+    try:
+        cnx = conectar_db()
+        cursor = cnx.cursor()
+        query = "INSERT INTO cliente (nome, cpf) VALUES (%s, %s);" # %s para evitar possiveis usuarios mal intencionados
+        dados = (nome, cpf)
+        cursor.execute(query, dados)
+        cnx.commit()
+
+    except mysql.connector.Error as erro:
+        cnx.rollback()
+        raise ValueError (f"Erro ao adicionar cliente, erro: {erro}")
+    finally:
+        if cursor:
+            cursor.close()
+        if cnx and cnx.is_connected():
+            cnx.close()

@@ -30,4 +30,6 @@ class Cliente:
         if len(value) != 11:
             raise ValueError("O CPF inválido: deve ter 11 dígitos numéricos.")
         self._cpf_cliente = value
-        
+    @property
+    def cpf_limpo(self):
+        return self._cpf_cliente
