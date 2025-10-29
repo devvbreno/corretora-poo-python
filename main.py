@@ -3,6 +3,9 @@ from corretora_app.models.conta_investimento import ContaInvestimento
 from corretora_app.models.ativo import Ativo
 from corretora_app.models.conta import Conta 
 from corretora_app.database import adicionar_cliente
+from corretora_app.database import buscar_cliente_por_cpf
+from corretora_app.database import buscar_ativo_por_ticker
+from corretora_app.database import atualizar_preco_ativo
 from mysql.connector import errorcode
 import mysql.connector
 
@@ -18,10 +21,53 @@ def main():
         print("Dados iniciais carregados.")
         print(conta_principal)
         
-        # Tentativa de adicionar o cliente ao banco de dados
-        print("Tentando adicionar o cliente ao banco de dados...")
-        adicionar_cliente(cliente_principal.nome_cliente, cliente_principal.cpf_limpo)
-        print("Cliente adicionado ao banco de dados com sucesso!(verificar workbench)")
+        # Tentativa de buscar o cliente por cpf
+        print("\n Tentando buscar o cliente no banco de dados por cpf...")
+        cliente_teste = buscar_cliente_por_cpf(cliente_principal.cpf_limpo)
+        if cliente_teste:
+            print ("Cliente Encontrado: ", cliente_teste)
+        else:
+            print ("Cliente não encontrado.")
+        
+        # Tentativa de buscar ativo por ticker
+        print("\n Tentando buscar o ativo no banco de dados por ticker...")
+        ativo_teste = buscar_ativo_por_ticker (ativo_exemplo.ticker)
+        if ativo_teste:
+            print ("Ativo Encontrado: ", ativo_teste)
+        else:
+            print ("Ativo não encontrado.")
+        
+        # Teste de Atualização de valor Válida
+
+        ticker_teste = "PYTH4" 
+        novo_preco_valido = 45.10
+        preco_invalido_neg = -5.0
+
+        try:
+            print(f"\nTentando atualizar {ticker_teste} para R$ {novo_preco_valido:.2f}...")
+            ativo_antes = buscar_ativo_por_ticker(ticker_teste) 
+            atualizar_preco_ativo(ticker_teste, novo_preco_valido)
+            ativo_depois = buscar_ativo_por_ticker(ticker_teste) 
+
+            if ativo_depois and ativo_depois.preco_atual == novo_preco_valido:
+                print(f"-> SUCESSO: Preço de {ticker_teste} atualizado de R$ {ativo_antes.preco_atual:.2f} para R$ {ativo_depois.preco_atual:.2f}.")
+            elif ativo_antes:
+                print(f"-> FALHA: Preço de {ticker_teste} NÃO foi atualizado corretamente (continua R$ {ativo_antes.preco_atual:.2f}).")
+            else:
+                print(f"-> ERRO: Ativo {ticker_teste} não encontrado para teste.")
+
+        except Exception as e:
+            print(f"ERRO INESPERADO durante atualização válida: {e}")
+
+        # 2. Teste de Atualização Inválida (Negativo)
+        try:
+            print(f"\nTentando atualizar {ticker_teste} para R$ {preco_invalido_neg:.2f} (inválido)...")
+            atualizar_preco_ativo(ticker_teste, preco_invalido_neg)
+        except ValueError as e:
+            print(f"-> SUCESSO: Erro esperado de VALIDAÇÃO capturado: '{e}'")
+        except Exception as e:
+            print(f"ERRO INESPERADO ao tentar atualizar com preço negativo: {e}")
+
 
     except ValueError as e:
         print(f"Erro DE VALOR ao inicializar dados: {e}")
@@ -34,7 +80,6 @@ def main():
         print(f"Erro DESCONHECIDO ao inicializar dados: {e}")
         return
 
-    print(conta_principal)
 
     while True:
         print("\n--- MENU PRINCIPAL ---")
