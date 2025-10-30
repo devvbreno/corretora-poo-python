@@ -6,6 +6,7 @@ from corretora_app.database import adicionar_cliente
 from corretora_app.database import buscar_cliente_por_cpf
 from corretora_app.database import buscar_ativo_por_ticker
 from corretora_app.database import atualizar_preco_ativo
+from corretora_app.database import salvar_conta
 from mysql.connector import errorcode
 import mysql.connector
 
@@ -41,7 +42,6 @@ def main():
 
         ticker_teste = "PYTH4" 
         novo_preco_valido = 45.10
-        preco_invalido_neg = -5.0
 
         try:
             print(f"\nTentando atualizar {ticker_teste} para R$ {novo_preco_valido:.2f}...")
@@ -59,16 +59,64 @@ def main():
         except Exception as e:
             print(f"ERRO INESPERADO durante atualização válida: {e}")
 
-        # 2. Teste de Atualização Inválida (Negativo)
+        # Teste de salvar cliente 
         try:
-            print(f"\nTentando atualizar {ticker_teste} para R$ {preco_invalido_neg:.2f} (inválido)...")
-            atualizar_preco_ativo(ticker_teste, preco_invalido_neg)
-        except ValueError as e:
-            print(f"-> SUCESSO: Erro esperado de VALIDAÇÃO capturado: '{e}'")
+            print(f"\nTentando adicionar o cliente {cliente_principal.nome_cliente} (CPF: {cliente_principal.cpf_limpo}) ao banco de dados...")
+            
+            cliente_existente = buscar_cliente_por_cpf(cliente_principal.cpf_limpo)
+            
+            if not cliente_existente:
+                adicionar_cliente(cliente_principal.nome_cliente, cliente_principal.cpf_limpo)
+                print("-> SUCESSO: Cliente adicionado.")
+                
+                cliente_apos_add = buscar_cliente_por_cpf(cliente_principal.cpf_limpo)
+                if cliente_apos_add:
+                    print(f"-> VERIFICAÇÃO: Cliente {cliente_apos_add.nome_cliente} encontrado no banco.")
+                else:
+                    print(f"-> FALHA NA VERIFICAÇÃO: Cliente não encontrado após adição.")
+            else:
+                print(f"-> INFO: Cliente (CPF: {cliente_principal.cpf_limpo}) já existe no banco. Teste de adição pulado.")
+
+        except mysql.connector.Error as db_error:
+            if db_error.errno == errorcode.ER_DUP_ENTRY:
+                print(f"-> AVISO: Cliente (CPF: {cliente_principal.cpf_limpo}) já existe no banco (Erro de Duplicidade).")
+            else:
+                print(f"-> ERRO DE BANCO DE DADOS ao salvar cliente: {db_error}")
         except Exception as e:
-            print(f"ERRO INESPERADO ao tentar atualizar com preço negativo: {e}")
+            print(f"-> ERRO INESPERADO ao salvar cliente: {e}")
+            
+        # --- Teste de salvar conta ---
+        try:
+            print(f"\nTentando salvar a conta {conta_principal.numero_conta} no banco...")
+            
+            # Precisamos do cliente com ID para salvar a conta
+            cliente_com_id = buscar_cliente_por_cpf(cliente_principal.cpf_limpo)
+            if not cliente_com_id:
+                raise ValueError("Cliente da conta não encontrado no banco para salvar a conta.")
+            
+            # Garantir que a conta em memória tenha o cliente com ID
+            conta_principal.cliente = cliente_com_id 
 
+            # Verificamos se a conta já existe antes de tentar salvar
+            # (Precisaríamos de uma função 'buscar_conta_por_numero' para isso,
+            # por enquanto, vamos apenas tentar salvar e tratar o erro de duplicidade)
 
+            novo_id_conta = salvar_conta(conta_principal)
+            
+            if novo_id_conta:
+                print(f"-> SUCESSO: Conta salva no banco com ID: {novo_id_conta}")
+            else:
+                print("-> FALHA: salvar_conta() não retornou um ID.")
+
+        except mysql.connector.Error as db_error:
+            if db_error.errno == errorcode.ER_DUP_ENTRY:
+                print(f"-> INFO: Conta (Número: {conta_principal.numero_conta}) já existe no banco.")
+            else:
+                print(f"-> ERRO DE BANCO DE DADOS ao salvar conta: {db_error}")
+        except Exception as e:
+            print(f"-> ERRO INESPERADO ao salvar conta: {e}")
+        
+        # --- Fim do teste ---
     except ValueError as e:
         print(f"Erro DE VALOR ao inicializar dados: {e}")
         return 
@@ -116,7 +164,7 @@ def main():
             except ValueError as e:
                 return print(f"Erro ao sacar: {e}")
             
-        elif opcao == '4':
+        elif opcao == '4.':
             print("\n--- Comprar Ativo ---")
             try:
                 print("Ativo disponivel:")

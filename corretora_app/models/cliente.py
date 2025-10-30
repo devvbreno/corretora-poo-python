@@ -1,21 +1,25 @@
 class Cliente:
-    def __init__(self, nome_cliente : str, cpf_cliente : str):
+    def __init__(self, nome_cliente : str, cpf_cliente : str, id_cliente: int = None):
         self.nome_cliente = nome_cliente
         self.cpf_cliente = cpf_cliente
-
+        self._id = id_cliente
     def __str__(self):
         return (f"Cliente: {self.nome_cliente} | CPF, {self.cpf_cliente} ")
 
     @property
+    def id(self):
+        return self._id
+
+    @property
     def nome_cliente (self):
-        return self._nome_cliente.title()
+        return self._nome_cliente
 
     @nome_cliente.setter
     def nome_cliente(self, value: str):
         if not value.strip():
             raise ValueError("O nome do cliente não pode ser vazio.")
         else:
-            self._nome_cliente = value.strip()
+            self._nome_cliente = value.strip().title()
 
     @property
     def cpf_cliente(self):

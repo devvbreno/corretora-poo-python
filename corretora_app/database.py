@@ -3,7 +3,7 @@ from mysql.connector import errorcode
 import os
 from dotenv import load_dotenv
 from .models.cliente import Cliente
-from .models.conta_investimento import ContaInvestimento
+from .models.conta import Conta
 from .models.ativo import Ativo
 
 load_dotenv() 
@@ -78,8 +78,11 @@ def buscar_cliente_por_cpf(cpf: str):
             
             if resultado:
                 id_cliente, nome_cliente, cpf_cliente = resultado
-                cliente_obj = Cliente(nome_cliente=nome_cliente, cpf_cliente= cpf_cliente)
-                return cliente_obj
+                try:
+                    cliente_obj = Cliente(nome_cliente=nome_cliente, cpf_cliente= cpf_cliente, id_cliente=id_cliente)
+                    return cliente_obj
+                except (ValueError, TypeError) as conv_err:
+                    print("Erro de resultado dos dados de busca de cliente por cpf.")
         else:
             print("Falha ao tentar conectar-se ao banco de dados.")
     except mysql.connector.Error as error:
@@ -165,6 +168,44 @@ def atualizar_preco_ativo(ticker: str, novo_preco: float):
         print(f"EErro inesperado: {e}")
         raise
 
+    finally:
+        if cursor:
+            cursor.close()
+        if cnx and cnx.is_connected():
+            cnx.close()
+
+def salvar_conta(conta : Conta):
+    cursor = None
+    cnx = None
+
+    try:
+        cnx = conectar_db()
+        if cnx and cnx.is_connected():
+            cursor = cnx.cursor()
+            
+            numero = conta.numero_conta
+            saldo = conta.saldo_da_conta
+            cliente_associado = conta.cliente
+            if not cliente_associado or not cliente_associado.id:
+                raise ValueError("O cliente associado a esta conta não possui u ID do banco")
+            id_do_cliente = cliente_associado.id
+            
+            query = "INSERT INTO conta (numero_conta, saldo, cliente_id) VALUES (%s, %s, %s)" 
+            dados = (numero, saldo, id_do_cliente)
+            cursor.execute(query, dados)
+            cnx.commit()
+            
+            print(f"Conta número: '{numero}' salva com sucesso!")
+            return cursor.lastrowid
+        else:
+            raise ConnectionError('Falha ao tentar conectar-se ao banco de dados.')
+    
+    except mysql.connector.Error as erro:
+        if cnx:
+            cnx.rollback()
+        raise ValueError (f"Erro ao salvar a conta, erro: {erro}")
+    except Exception as e:
+        print(f"Um erro inesperado: {e}")
     finally:
         if cursor:
             cursor.close()

@@ -6,8 +6,13 @@ from .itransacionavel import ITransacionavel
 class Conta(ITransacionavel):
     def __init__(self, cliente : Cliente, numero_conta : str, saldo_inicial : float = 0.0):
         
+        if numero_conta is None:
+            numero_gerado = random.randint(100000, 999999)
+            self._numero_conta = str(numero_gerado)
+        else:
+            self._numero_conta = numero_conta
+            
         self._cliente = cliente
-        self._numero_conta = numero_conta
         self._saldo_disponivel = saldo_inicial
 
     def __str__(self):
@@ -17,9 +22,14 @@ class Conta(ITransacionavel):
         return f"\n Cliente: {nome_cliente} | Conta: {self._numero_conta} | Saldo disponivel: {saldo_formatado}."
 
     @property
+    def numero_conta(self):
+        numero = self._numero_conta
+        return f"{numero[:5]}-{numero[5:6]}"
+    
+    @property
     def saldo_da_conta (self):
         return self._saldo_disponivel
-    
+
     @property
     def carteira(self):
         return self._carteira.copy()

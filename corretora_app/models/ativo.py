@@ -46,4 +46,3 @@ class Ativo:
         if novo_preco < 0:
             raise ValueError("O preço não pode ser um numero negativo.")
         self._preco_atual = novo_preco
-            
