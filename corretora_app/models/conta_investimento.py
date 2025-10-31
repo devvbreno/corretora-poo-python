@@ -3,8 +3,8 @@ from .ativo import Ativo
 from .conta import Conta
 
 class ContaInvestimento(Conta):
-    def __init__(self, cliente : Cliente, numero_conta: str, saldo_inicial : float = 0.0):
-        super().__init__(cliente, numero_conta, saldo_inicial)
+    def __init__(self, cliente : Cliente, numero_conta: str, saldo_inicial : float = 0.0, id_conta: int = None ):
+        super().__init__(cliente, numero_conta, saldo_inicial, id_conta)
         self._carteira = {}
     
     def __str__(self):

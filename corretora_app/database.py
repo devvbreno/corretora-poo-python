@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from .models.cliente import Cliente
 from .models.conta import Conta
 from .models.ativo import Ativo
+from .models.conta_investimento import ContaInvestimento
 
 load_dotenv() 
 
@@ -165,7 +166,7 @@ def atualizar_preco_ativo(ticker: str, novo_preco: float):
             raise ValueError(f"Erro no banco de dados ao atualizar preço.") from bd_error
 
     except Exception as e:
-        print(f"EErro inesperado: {e}")
+        print(f"Erro inesperado: {e}")
         raise
 
     finally:
@@ -211,3 +212,101 @@ def salvar_conta(conta : Conta):
             cursor.close()
         if cnx and cnx.is_connected():
             cnx.close()
+
+def atualizar_saldo_conta(numero_conta: str, novo_saldo: float):
+    cnx = None
+    cursor = None
+    try:
+        if not isinstance(novo_saldo, (int, float)) or novo_saldo < 0:
+            raise ValueError ("O novo saldo deve ser um numero e não pode ser menor que zero.")
+        
+        cnx = conectar_db()
+        if cnx and cnx.is_connected():
+            cursor = cnx.cursor()
+
+            query = "UPDATE conta SET saldo = %s WHERE numero_conta = %s"
+            dados = (novo_saldo, numero_conta)
+
+            cursor.execute(query, dados)
+            cnx.commit()
+            if cursor.rowcount > 0:
+                print(f"Saldo da conta {numero_conta} atualizado para R$ {novo_saldo:.2f}")
+            else:
+                print(f"Aviso: conta {numero_conta} não encontrado para atualização.")
+    except (TypeError, ValueError) as val_error:
+        print(f"Erro de validação ao atualizar preço: {val_error}")
+        raise
+
+    except mysql.connector.Error  as bd_error:
+        if cnx:
+            cnx.rollback()
+            print("Erro ao tentar atualizar o novo saldo da conta no banco de dados. ")
+            raise ValueError(f"Erro no banco de dados ao atualizar o saldo.") from bd_error
+
+    except Exception as e:
+        print(f"Erro inesperado: {e}")
+        raise
+
+    finally:
+        if cursor:
+            cursor.close()
+        if cnx and cnx.is_connected():
+            cnx.close()
+
+def buscar_conta_por_numero(numero_conta):
+    cnx = None
+    cursor = None
+
+    try:
+        cnx = conectar_db()
+        if cnx and cnx.is_connected():
+            
+            cursor = cnx.cursor()
+            
+            query = """
+            SELECT 
+                c.id, c.numero_conta, c.saldo, cl.id, cl.nome, cl.cpf 
+            FROM 
+                conta AS c 
+            JOIN 
+                cliente AS cl ON c.cliente_id = cl.id 
+            WHERE 
+                c.numero_conta = %s"""
+
+            dados = (numero_conta,)
+            cursor.execute(query, dados)
+            resultado = cursor.fetchone()
+
+            if resultado:
+                id_conta_bd, numero_conta_bd, saldo_conta_bd, id_cliente_bd, nome_cliente_bd, cpf_cliente_bd = resultado
+                try:
+                    cliente_obj = Cliente(
+                            id_cliente=id_cliente_bd, 
+                            nome_cliente=nome_cliente_bd,
+                            cpf_cliente=cpf_cliente_bd
+                            )
+                    
+                    conta_investimento_obj = ContaInvestimento(
+                        cliente=cliente_obj, 
+                        numero_conta=numero_conta_bd, 
+                        saldo_inicial= float(saldo_conta_bd),
+                        id_conta=id_conta_bd
+                        )
+                    return conta_investimento_obj
+                except (ValueError, TypeError) as e:
+                    print(f"Erro nos dados: {e}")
+            else:
+                print(f"Dados não encontrado.")
+                return None
+        else:
+            print("Falha ao tentar conectar-se ao banco de dados.")
+
+    except mysql.connector.Error as error:
+        print (f'Erro nos dados de busca:  {error}')
+
+    finally:
+        if cursor:
+            cursor.close()
+        if cnx and cnx.is_connected():
+            cnx.close()
+    return None

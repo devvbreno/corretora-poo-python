@@ -4,16 +4,17 @@ from .itransacionavel import ITransacionavel
 #Classe abstrata mãe (define a estrutura de uma conta genérica)
 
 class Conta(ITransacionavel):
-    def __init__(self, cliente : Cliente, numero_conta : str, saldo_inicial : float = 0.0):
-        
+    def __init__(self, cliente : Cliente, numero_conta : str, saldo_inicial : float = 0.0, id_conta: int = None):
+
         if numero_conta is None:
             numero_gerado = random.randint(100000, 999999)
             self._numero_conta = str(numero_gerado)
         else:
             self._numero_conta = numero_conta
-            
+
         self._cliente = cliente
         self._saldo_disponivel = saldo_inicial
+        self._id = id_conta
 
     def __str__(self):
         
@@ -22,10 +23,24 @@ class Conta(ITransacionavel):
         return f"\n Cliente: {nome_cliente} | Conta: {self._numero_conta} | Saldo disponivel: {saldo_formatado}."
 
     @property
+    def cliente(self):
+        return self._cliente
+
+    @cliente.setter
+    def cliente(self, value : Cliente):
+        if not isinstance(value, Cliente):
+            raise TypeError ("O valor atribuido deve ser um objeto Cliente.")
+        self._cliente = value
+
+    @property
+    def id(self):
+        return self._id
+
+    @property
     def numero_conta(self):
         numero = self._numero_conta
         return f"{numero[:5]}-{numero[5:6]}"
-    
+
     @property
     def saldo_da_conta (self):
         return self._saldo_disponivel
