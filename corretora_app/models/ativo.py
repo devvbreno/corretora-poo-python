@@ -1,12 +1,25 @@
 class Ativo:
-    def __init__(self, ticker: str, nome_empresa: str, preco_atual: float):
+    def __init__(self, ticker: str, nome_empresa: str, preco_atual: float, id :int = None):
         self.nome_empresa = nome_empresa
         self.preco_atual = preco_atual
         self.ticker = ticker
+        self._id = id
 
     def __str__(self):
         return f"{self.nome_empresa} ({self.ticker}) - Preço: R$ {self.preco_atual}"
 
+    # Getter e Setter do id
+
+    @property
+    def id(self):
+        return self._id
+    
+    @id.setter
+    def id(self, value):
+        if not isinstance(value, (int)):
+            raise ValueError("O id precisa ser um inteiro")
+        self._id = value
+        
 	# Getter e Setter do Ticker
 
     @property

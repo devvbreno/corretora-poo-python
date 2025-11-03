@@ -114,8 +114,8 @@ def buscar_ativo_por_ticker(ticker: str):
             if resultado:
                 id_ativo, ticker_bd, nome_empresa_bd, preco_atual_bd = resultado
                 try:
-                    preco_atual = float(preco_atual_bd)
-                    ativo_obj = Ativo(ticker=ticker_bd, nome_empresa=nome_empresa_bd, preco_atual=preco_atual)
+                    preco_atual_bd = float(preco_atual_bd)
+                    ativo_obj = Ativo(ticker=ticker_bd, nome_empresa=nome_empresa_bd, preco_atual=preco_atual_bd, id= id_ativo)
                     return ativo_obj
                 except (ValueError, TypeError) as conv_err:
                     print(f"Erro ao converter o ativo do banco de dados: {conv_err}")
@@ -310,3 +310,95 @@ def buscar_conta_por_numero(numero_conta):
         if cnx and cnx.is_connected():
             cnx.close()
     return None
+
+def buscar_carteira(conta_id: int):
+    cnx = None
+    cursor = None
+    carteira_dict = {}
+
+    try:
+        cnx = conectar_db()
+        if cnx and cnx.is_connected():
+            
+            cursor = cnx.cursor()
+            
+            query = """
+            SELECT 
+                at.ticker, ct.quantidade
+            FROM 
+                carteira AS ct
+            JOIN 
+                ativo AS at ON ct.ativo_id = at.id 
+            WHERE 
+                ct.conta_id = %s    
+            """
+
+            dados = (conta_id,)
+            cursor.execute(query, dados)
+            resultado = cursor.fetchall()
+                        
+            for (ticker, quantidade) in resultado:
+                carteira_dict[ticker] = quantidade
+
+            return carteira_dict
+        else:
+            print("Falha ao tentar conectar-se ao banco de dados.")
+
+    except mysql.connector.Error as error:
+        print (f'Erro nos dados de busca:  {error}')
+
+    finally:
+        if cursor:
+            cursor.close()
+        if cnx and cnx.is_connected():
+            cnx.close()
+    return carteira_dict
+
+def atualizar_posicao_carteira(conta_id: int, ativo_id: int, nova_quantidade: int):
+    cnx = None
+    cursor = None
+    try:
+        if not isinstance(nova_quantidade, int) :
+            raise ValueError ("A nova quantidade deve ser um numero inteiro.")
+        
+        cnx = conectar_db()
+        if cnx and cnx.is_connected():
+            cursor = cnx.cursor()
+
+            query = """
+            INSERT INTO carteira (conta_id, ativo_id, quantidade)
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE quantidade = %s
+            """
+            dados = (conta_id, ativo_id, nova_quantidade, nova_quantidade)
+
+            if nova_quantidade > 0:
+                cursor.execute(query, dados)
+            else: 
+                query_delete = """
+                DELETE FROM carteira 
+                WHERE conta_id = %s AND ativo_id = %s
+                """
+                dados_delete = (conta_id, ativo_id)
+                cursor.execute(query_delete, dados_delete)
+            cnx.commit()
+            print(f"Posição da carteira (Conta ID: {conta_id}, Ativo ID: {ativo_id}) atualizada para {nova_quantidade}.")
+    except (TypeError, ValueError) as val_error:
+        print(f"Erro de validação ao atualizar carteira: {val_error}")
+        raise
+
+    except mysql.connector.Error  as bd_error:
+        if cnx:
+            cnx.rollback()
+            print("Erro ao tentar atualizar a carteira no banco de dados. ")
+            raise ValueError(f"Erro no banco de dados ao atualizar a carteira.") from bd_error
+
+    except Exception as e:
+        print(f"Erro inesperado: {e}")
+        raise
+
+    finally:
+        if cursor:
+            cursor.close()
+        if cnx and cnx.is_connected():
+            cnx.close()

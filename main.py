@@ -1,97 +1,52 @@
-# main.py (Versão Corrigida e Refinada)
 
 from corretora_app.models.cliente import Cliente
 from corretora_app.models.conta_investimento import ContaInvestimento
 from corretora_app.models.ativo import Ativo
 from corretora_app.models.conta import Conta 
-# Importação completa
 from corretora_app.database import (
-    adicionar_cliente, 
-    buscar_cliente_por_cpf, 
-    buscar_ativo_por_ticker, 
-    atualizar_preco_ativo, 
+    adicionar_cliente,
     salvar_conta,
+    buscar_cliente_por_cpf, 
+    buscar_ativo_por_ticker,
+    buscar_conta_por_numero,
+    buscar_carteira,
+    #atualizar_buscar_carteira,
+    atualizar_preco_ativo,
     atualizar_saldo_conta,
-    buscar_conta_por_numero
+    atualizar_posicao_carteira
 )
 from mysql.connector import errorcode
 import mysql.connector
 
-# Importação de classes necessárias para o database.py
-from corretora_app.models.conta import Conta
-from corretora_app.models.cliente import Cliente
-from corretora_app.models.ativo import Ativo
-from corretora_app.models.conta_investimento import ContaInvestimento
-
-
+NUMERO_LOGIN = "12345--"
 def main():
-    print("--- Bem-vindo(a) à Corretora POO ---")
-
-    # --- BLOCO DE INICIALIZAÇÃO E TESTE DE BANCO ---
     try:
-        # 1. Cria objetos em memória (ainda necessários para o menu)
-        cliente_principal = Cliente(nome_cliente="Breno", cpf_cliente="11122233344")
-        ativo_exemplo = Ativo(ticker="PYTH4", nome_empresa="Python Corp", preco_atual=50.0)
+        print(f"\n Carregando dados da conta {NUMERO_LOGIN}")
+        conta = buscar_conta_por_numero(NUMERO_LOGIN)
+        if not conta:
+            print (f"erro ao tentar carregar: {NUMERO_LOGIN}")
+            print ("DEV: Execute os testes novamente para descobrir a origem da falha")
         
-        # 2. Garante que o cliente de teste exista no banco
-        print("\nVerificando cliente principal no banco de dados...")
-        cliente_com_id = buscar_cliente_por_cpf(cliente_principal.cpf_limpo)
-        if not cliente_com_id:
-            print(f"Cliente (CPF: {cliente_principal.cpf_limpo}) não encontrado. Adicionando...")
-            adicionar_cliente(cliente_principal.nome_cliente, cliente_principal.cpf_limpo)
-            cliente_com_id = buscar_cliente_por_cpf(cliente_principal.cpf_limpo)
+        print (f"Cliente carregado: {conta.cliente.nome_cliente}")
         
-        if not cliente_com_id:
-            raise ValueError("Falha crítica ao criar/buscar cliente principal.")
-        print(f"Cliente (ID: {cliente_com_id.id}) carregado do banco.")
+        print("\n Carregando carteira...")
+        carteira_bd = buscar_carteira(conta.id)
+        conta.carteira = carteira_bd
+        print ("Login bem-sucedido!")
         
-        # 3. Cria o objeto Conta principal USANDO o cliente com ID
-        conta_principal = ContaInvestimento(cliente=cliente_com_id, numero_conta="12345-6")
-        print("Objeto ContaInvestimento principal criado.")
-
-        # 4. Garante que a conta de teste exista no banco
-        print(f"\nVerificando conta {conta_principal.numero_conta} no banco...")
-        conta_buscada = buscar_conta_por_numero(conta_principal.numero_conta)
-        if not conta_buscada:
-            print(f"Conta {conta_principal.numero_conta} não encontrada. Salvando...")
-            salvar_conta(conta_principal)
-            print("-> SUCESSO: Conta salva no banco.")
-        else:
-            print(f"-> INFO: Conta {conta_principal.numero_conta} já existe no banco.")
-            # Atualiza o objeto em memória com os dados do banco
-            conta_principal = conta_buscada 
-
-        print("\n--- Testes de Busca e Atualização ---")
-        # Teste de buscar ativo
-        ativo_teste = buscar_ativo_por_ticker(ativo_exemplo.ticker)
-        if ativo_teste:
-            print (f"Ativo Encontrado: {ativo_teste}")
-        else:
-            print (f"Ativo '{ativo_exemplo.ticker}' não encontrado.")
-            # (Opcional: adicionar o ativo_exemplo ao banco aqui)
-
-        # Teste de atualizar saldo
-        NOVO_SALDO = 123.45 # Um valor de teste
-        print(f"\nTestando atualização de saldo para R$ {NOVO_SALDO:.2f}...")
-        atualizar_saldo_conta(conta_principal.numero_conta, NOVO_SALDO)
-        conta_atualizada = buscar_conta_por_numero(conta_principal.numero_conta)
+        ativo = "ITUB4"
+        ativo_busca = buscar_ativo_por_ticker(ativo)
+        if not ativo_busca:
+            print(f"Ativo de exemplo: {ativo} não encontrado")
+            # programa continua porém compra/venda pode falhar
         
-        # CORREÇÃO: Usando seu getter 'saldo_da_conta'
-        if conta_atualizada and conta_atualizada.saldo_da_conta == NOVO_SALDO:
-            print(f"-> SUCESSO: Saldo atualizado no banco.")
-            conta_principal = conta_atualizada # Atualiza o objeto principal em memória
-        else:
-            print(f"-> FALHA: Saldo não foi atualizado no banco.")
-
-    except (ValueError, mysql.connector.Error, Exception) as e:
-        print(f"\n--- ERRO CRÍTICO NA INICIALIZAÇÃO ---")
-        print(f"Ocorreu um erro ao carregar dados: {e}")
-        print("Aplicação será encerrada.")
-        return # Encerra o programa se a inicialização falhar
-
-    # --- FIM DO BLOCO DE INICIALIZAÇÃO ---
-
-
+        print (f"\n -- Resumo da conta --")
+        conta.exibir_resumo()
+        
+    except Exception as e:
+        print(f"Erro durante a inicialização: {e}")
+        return
+    
     while True:
         print("\n--- MENU PRINCIPAL ---")
         print("1. Ver Resumo da Conta")
@@ -104,28 +59,20 @@ def main():
 
         opcao = input("Escolha uma opção: ")
 
-        # Lógica do Menu
         if opcao == '1':
             print("\n--- Resumo da Conta ---")
-            # Usamos o objeto 'conta_principal' atualizado
-            conta_principal.exibir_resumo() 
+            conta.exibir_resumo() 
             
         elif opcao == '2':
             try:
                 valor_str = input("Digite o valor a ser depositado: R$ ")
                 valor_float = float(valor_str)
-                
-                # 1. Atualiza o objeto em memória
-                conta_principal.depositar(valor_float) 
-                
-                # 2. Salva a mudança no banco de dados
-                # CORREÇÃO: Usando seu getter
-                atualizar_saldo_conta(conta_principal.numero_conta, conta_principal.saldo_da_conta) 
+                conta.depositar(valor_float) 
+                atualizar_saldo_conta(conta.numero_conta, conta.saldo_da_conta) 
                 
                 print("Depósito realizado e salvo no banco.")
                 
             except (ValueError, TypeError) as e:
-                # CORREÇÃO: Remover 'return', apenas imprimir o erro
                 print(f"Erro ao depositar: {e}")
 
         elif opcao == '3':
@@ -133,42 +80,37 @@ def main():
                 valor_str = input("Digite o valor a ser sacado: R$ ")
                 valor_float = float(valor_str)
                 
-                # 1. Atualiza o objeto em memória (aqui ocorre a validação de saldo)
-                conta_principal.sacar(valor_float)
+                conta.sacar(valor_float)
                 
-                # 2. Salva a mudança no banco de dados
-                # CORREÇÃO: Usando seu getter
-                atualizar_saldo_conta(conta_principal.numero_conta, conta_principal.saldo_da_conta)
+                atualizar_saldo_conta(conta.numero_conta, conta.saldo_da_conta)
                 
                 print("Saque realizado e salvo no banco.")
                 
             except (ValueError, TypeError) as e:
-                # CORREÇÃO: Remover 'return'
                 print(f"Erro ao sacar: {e}")
             
-        elif opcao == '4': # CORREÇÃO: Removido o '.'
+        elif opcao == '4': 
             print("\n--- Comprar Ativo ---")
             try:
                 print("Ativo disponível:")
-                print(ativo_exemplo)
-                # CORREÇÃO: Usando seu getter
-                print(f"Saldo Disponível: R$ {conta_principal.saldo_da_conta:.2f}")
+                print(ativo_busca)
+                print(f"Saldo Disponível: R$ {conta.saldo_da_conta:.2f}")
                 
                 decisao = input("Deseja comprar este ativo? (S/N): ").upper().strip()
                 if decisao == 'S':
-                    quantidade_str = input(f"Quantos ativos {ativo_exemplo.ticker} deseja comprar? ")
+                    quantidade_str = input(f"Quantos ativos {ativo_busca.ticker} deseja comprar? ")
                     quantidade_int = int(quantidade_str)
+                    conta.comprar_ativo(ativo_busca, quantidade_int)
                     
-                    # 1. Atualiza o objeto em memória (valida e muda saldo/carteira)
-                    conta_principal.comprar_ativo(ativo_exemplo, quantidade_int)
-                    
-                    # 2. Salva as mudanças no banco de dados
-                    # (Precisaremos de 'atualizar_posicao_carteira' aqui no futuro)
-                    # CORREÇÃO: Usando seu getter
-                    atualizar_saldo_conta(conta_principal.numero_conta, conta_principal.saldo_da_conta)
-                    
-                    print("Compra realizada e saldo salvo no banco.")
-                    # (A carteira em si ainda não está sendo salva no BD!)
+                    atualizar_saldo_conta(conta.numero_conta, conta.saldo_da_conta)
+                    nova_quantidade_total = conta.carteira[ativo_busca.ticker]
+                
+                    atualizar_posicao_carteira(
+                        conta_id=conta.id, 
+                        ativo_id=ativo_busca.id, 
+                        nova_quantidade=nova_quantidade_total
+                    )
+                    print("Compra realizada e salva no banco de dados.")
                 else:
                     print("Compra cancelada.")
             except (ValueError, TypeError) as e:
@@ -178,25 +120,26 @@ def main():
             print("\n--- Vender Ativo ---")
             try:
                 print("Ativos que constam na sua carteira:")
-                print(conta_principal.carteira) # Isso ainda é da memória
-                
-                # (A lógica aqui precisará ser melhorada para buscar o ativo real do BD)
-                decisao = input(f"Deseja vender {ativo_exemplo.ticker}? (S/N): ").upper().strip()
+                print(conta.carteira) 
+                decisao = input(f"Deseja vender {ativo_busca.ticker}? (S/N): ").upper().strip()
                 
                 if decisao == 'S':
-                    quantidade_str = input(f"Quantos ativos {ativo_exemplo.ticker} deseja vender? ")
+                    quantidade_str = input(f"Quantos ativos {ativo_busca.ticker} deseja vender? ")
                     quantidade_int = int(quantidade_str)
                     
-                    # 1. Atualiza o objeto em memória
-                    conta_principal.vender_ativo(ativo_exemplo, quantidade_int)
-                    
-                    # 2. Salva as mudanças no banco de dados
-                    # (Precisaremos de 'atualizar_posicao_carteira' aqui)
-                    # CORREÇÃO: Usando seu getter
-                    atualizar_saldo_conta(conta_principal.numero_conta, conta_principal.saldo_da_conta)
-                    
-                    print("Venda realizada e saldo salvo no banco.")
-                    # (A carteira em si ainda não está sendo salva no BD!)
+                    conta.vender_ativo(ativo_busca, quantidade_int)
+
+                    atualizar_saldo_conta(conta.numero_conta, conta.saldo_da_conta)                
+                    if ativo_busca.ticker in conta.carteira:
+                        nova_quantidade_total = conta.carteira[ativo_busca.ticker]
+                    else:
+                        nova_quantidade_total = 0 
+                
+                    atualizar_posicao_carteira(
+                        conta_id=conta.id, 
+                        ativo_id=ativo_busca.id, 
+                        nova_quantidade=nova_quantidade_total)
+                    print("Venda realizada e salva no banco de dados.")
                 else:
                     print("Venda cancelada.")
             except (ValueError, TypeError) as e:
@@ -204,7 +147,7 @@ def main():
             
         elif opcao == '6':
             print(f"\n--- Info Ativo Exemplo ---")
-            print(ativo_exemplo)
+            print(ativo_busca)
 
         elif opcao == '7':
             print("Saindo da aplicação...")

@@ -13,6 +13,16 @@ class ContaInvestimento(Conta):
         info_carteira = f"| Carteira: {self.carteira}"
         return info_base + info_carteira
     
+    @property
+    def carteira(self):
+        return self._carteira 
+    
+    @carteira.setter
+    def carteira (self, nova_carteira):
+        if not isinstance(nova_carteira, dict):
+            raise TypeError("A carteira deve ser um dicionário.")
+        self._carteira = nova_carteira
+    
     def comprar_ativo(self, ativo_a_comprar : Ativo, quantidade : int):
 
         if not isinstance (ativo_a_comprar, Ativo):
