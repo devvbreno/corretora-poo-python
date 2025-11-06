@@ -10,7 +10,6 @@ from corretora_app.database import (
     buscar_ativo_por_ticker,
     buscar_conta_por_numero,
     buscar_carteira,
-    #atualizar_buscar_carteira,
     atualizar_preco_ativo,
     atualizar_saldo_conta,
     atualizar_posicao_carteira
